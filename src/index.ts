@@ -1,24 +1,3 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `wrangler dev src/index.ts` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `wrangler publish src/index.ts --name my-worker` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-
-export interface Env {
-  // Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-  // MY_KV_NAMESPACE: KVNamespace;
-  //
-  // Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-  // MY_DURABLE_OBJECT: DurableObjectNamespace;
-  //
-  // Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-  // MY_BUCKET: R2Bucket;
-}
-
 import GoogleAuth, { GoogleKey } from "cloudflare-workers-and-google-oauth";
 
 // Add secret using Wrangler or the Cloudflare dash
@@ -32,7 +11,6 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<Response> {
-    // https://developers.google.com/identity/protocols/oauth2/scopes
     const scopes: string[] = [
       "https://www.googleapis.com/auth/fitness.sleep.read",
     ];
@@ -42,14 +20,14 @@ export default {
     const oauth = new GoogleAuth(googleAuth, scopes);
     const token = await oauth.getGoogleAuthToken();
 
-    const todayMidnight = new Date();
-    todayMidnight.setHours(0, 0, 0, 0);
-    const todayMidnightMilliseconds = todayMidnight.getTime();
-    const todayMinusOne = todayMidnightMilliseconds - 86400000;
-    const todayMinusTwo = todayMidnightMilliseconds - 86400000 * 2;
-    // console.log("today: " + todayMidnightMilliseconds);
-    // console.log("todayMinusOne: " + todayMinusOne);
-    // console.log("todayMinusTwo: " + todayMinusTwo);
+    const oneDayInMilliseconds = 24 * 60 * 60 * 1000;
+    const currentTime = Date.now();
+    
+    const startTimeMillis = new Date(currentTime - oneDayInMilliseconds).setUTCHours(0, 0, 0, 0);
+    const endTimeMillis = new Date(currentTime - oneDayInMilliseconds).setUTCHours(23, 59, 59, 999);
+    
+    console.log("Previous day start:", startTimeMillis);
+    console.log("Previous day end:", endTimeMillis);
 
     var getSleepStats = await fetch(
       "https://fitness.googleapis.com/fitness/v1/users/me/dataset:aggregate",
@@ -65,10 +43,8 @@ export default {
               dataTypeName: "com.google.sleep.segment",
             },
           ],
-          //   endTimeMillis: 1673568000000,
-          //   startTimeMillis: 1673481600000,
-          endTimeMillis: todayMinusOne,
-          startTimeMillis: todayMinusTwo,
+          endTimeMillis,
+          startTimeMillis,
         }),
       }
     ).then((response) => {
